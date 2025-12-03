@@ -116,7 +116,46 @@ class AdminPanelProvider extends PanelProvider
 }
 ```
 
-That's it! The plugin will automatically sanitize all PDF uploads in your Filament panels.
+### Using Sanitization on Specific FileUpload Components
+
+By default, the plugin does **not** sanitize PDFs automatically. You must explicitly enable sanitization on each FileUpload component using the `->sanitize()` method:
+
+```php
+use Filament\Forms\Components\FileUpload;
+
+FileUpload::make('document')
+    ->sanitize() // Enable PDF sanitization for this field
+    ->acceptedFileTypes(['application/pdf']),
+
+FileUpload::make('image')
+    ->acceptedFileTypes(['image/jpeg', 'image/png']),
+    // This field will NOT be sanitized (no ->sanitize() call)
+```
+
+**Example in a Resource Form:**
+
+```php
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Form;
+
+public function form(Form $form): Form
+{
+    return $form
+        ->schema([
+            FileUpload::make('contract')
+                ->label('Contract PDF')
+                ->sanitize() // Only this field will sanitize PDFs
+                ->acceptedFileTypes(['application/pdf'])
+                ->required(),
+                
+            FileUpload::make('photo')
+                ->label('Photo')
+                ->image()
+                ->acceptedFileTypes(['image/jpeg', 'image/png']),
+                // No sanitization needed for images
+        ]);
+}
+```
 
 ### Configuration Options
 

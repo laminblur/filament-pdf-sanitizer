@@ -3,6 +3,7 @@
 namespace Laminblur\FilamentPdfSanitizer;
 
 use Filament\Contracts\Plugin;
+use Filament\Forms\Components\FileUpload;
 use Filament\Panel;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Support\Facades\Blade;
@@ -168,6 +169,18 @@ class FilamentPdfSanitizerPlugin implements Plugin
         if (! $this->isEnabled()) {
             return;
         }
+
+        // Add sanitize() method to FileUpload component via macro
+        FileUpload::macro('sanitize', function (bool $sanitize = true) {
+            /** @var FileUpload $this */
+            // Get existing extra input attributes
+            $existing = $this->getExtraInputAttributes();
+            
+            // Merge with our sanitize attribute
+            return $this->extraInputAttributes(array_merge($existing, [
+                'data-pdf-sanitize' => $sanitize ? 'true' : 'false',
+            ]));
+        });
 
         $panel->renderHook(
             PanelsRenderHook::BODY_END,

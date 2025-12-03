@@ -6,7 +6,7 @@ let jsPDFPromise = null;
  * Get configuration from window object
  */
 function getConfig() {
-    return window.filamentPdfSanitizerConfig || {
+    const config = window.filamentPdfSanitizerConfig || {
         workerPath: '/vendor/filament-pdf-sanitizer/pdf.worker.min.js',
         scale: 1.5,
         quality: 0.85,
@@ -14,6 +14,13 @@ function getConfig() {
         maxPages: null,
         showProgress: true,
         logErrors: true,
+    };
+    
+    // Ensure boolean values are actually booleans (Blade @js might convert them)
+    return {
+        ...config,
+        showProgress: config.showProgress === true || config.showProgress === 'true' || config.showProgress === 1,
+        logErrors: config.logErrors === true || config.logErrors === 'true' || config.logErrors === 1,
     };
 }
 
@@ -23,7 +30,11 @@ function getConfig() {
 function logError(message, error = null) {
     const config = getConfig();
     if (config.logErrors) {
-        console.error('[Filament PDF Sanitizer]', message, error || '');
+        const errorDetails = error instanceof Error ? error.message : (error || '');
+        console.error('[Filament PDF Sanitizer]', message, errorDetails);
+        if (error instanceof Error && error.stack) {
+            console.error('[Filament PDF Sanitizer] Stack:', error.stack);
+        }
     }
 }
 
@@ -34,6 +45,16 @@ function logWarning(message) {
     const config = getConfig();
     if (config.logErrors) {
         console.warn('[Filament PDF Sanitizer]', message);
+    }
+}
+
+/**
+ * Log info if logging is enabled
+ */
+function logInfo(message) {
+    const config = getConfig();
+    if (config.logErrors) {
+        console.log('[Filament PDF Sanitizer]', message);
     }
 }
 
@@ -65,33 +86,60 @@ function checkFileSize(file) {
  */
 function showProgress(input, message = 'Sanitizing PDF...') {
     const config = getConfig();
-    if (!config.showProgress) return null;
+    if (!config.showProgress) {
+        return null;
+    }
 
-    const wrapper = input.closest('.fi-fo-file-upload-wrapper, .filament-forms-file-upload-component, .fi-input-wrp');
-    if (!wrapper) return null;
+    if (!input) {
+        return null;
+    }
+
+    // Try multiple selectors to find the wrapper (Filament 3.x structure)
+    const wrapper = input.closest('.fi-fo-file-upload-wrapper') ||
+                    input.closest('.filament-forms-file-upload-component') ||
+                    input.closest('.fi-input-wrp') ||
+                    input.closest('.fi-input') ||
+                    input.parentElement?.parentElement;
+    
+    if (!wrapper) {
+        // If no wrapper found, create one around the input
+        const container = document.createElement('div');
+        container.style.cssText = 'position: relative; display: inline-block; width: 100%;';
+        input.parentNode?.insertBefore(container, input);
+        container.appendChild(input);
+        return showProgress(input, message);
+    }
+
+    // Ensure wrapper has relative positioning
+    const wrapperPosition = window.getComputedStyle(wrapper).position;
+    if (wrapperPosition === 'static' || !wrapperPosition) {
+        wrapper.style.position = 'relative';
+    }
 
     // Create or update progress indicator
     let indicator = wrapper.querySelector('.pdf-sanitizer-progress');
     if (!indicator) {
         indicator = document.createElement('div');
         indicator.className = 'pdf-sanitizer-progress';
+        indicator.setAttribute('data-pdf-sanitizer-progress', 'true');
         indicator.style.cssText = `
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.85);
             display: flex;
             align-items: center;
             justify-content: center;
             flex-direction: column;
-            z-index: 1000;
+            z-index: 9999;
             border-radius: 0.5rem;
             color: white;
             font-size: 0.875rem;
+            font-weight: 500;
+            backdrop-filter: blur(2px);
         `;
-        wrapper.style.position = 'relative';
         wrapper.appendChild(indicator);
     }
 
@@ -142,7 +190,14 @@ function showProgress(input, message = 'Sanitizing PDF...') {
  * Hide progress indicator
  */
 function hideProgress(input) {
-    const wrapper = input.closest('.fi-fo-file-upload-wrapper, .filament-forms-file-upload-component, .fi-input-wrp');
+    if (!input) return;
+    
+    const wrapper = input.closest('.fi-fo-file-upload-wrapper') ||
+                    input.closest('.filament-forms-file-upload-component') ||
+                    input.closest('.fi-input-wrp') ||
+                    input.closest('.fi-input') ||
+                    input.parentElement?.parentElement;
+    
     if (wrapper) {
         const indicator = wrapper.querySelector('.pdf-sanitizer-progress');
         if (indicator) {
@@ -157,7 +212,14 @@ function hideProgress(input) {
  * Update progress message
  */
 function updateProgress(input, message, percent = null) {
-    const wrapper = input.closest('.fi-fo-file-upload-wrapper, .filament-forms-file-upload-component, .fi-input-wrp');
+    if (!input) return;
+    
+    const wrapper = input.closest('.fi-fo-file-upload-wrapper') ||
+                    input.closest('.filament-forms-file-upload-component') ||
+                    input.closest('.fi-input-wrp') ||
+                    input.closest('.fi-input') ||
+                    input.parentElement?.parentElement;
+    
     if (wrapper) {
         const indicator = wrapper.querySelector('.pdf-sanitizer-progress');
         if (indicator) {
@@ -206,6 +268,8 @@ export async function sanitizePdf(file, options = {}) {
     }
 
     const config = getConfig();
+    logInfo(`Config loaded - showProgress: ${config.showProgress}, logErrors: ${config.logErrors}`);
+    
     const {
         workerPath = config.workerPath,
         scale = config.scale,
@@ -221,6 +285,8 @@ export async function sanitizePdf(file, options = {}) {
         logWarning(sizeCheck.message);
         return file; // Return original file if size check fails
     }
+
+    logInfo(`Processing PDF: ${file.name}, Pages: checking...`);
 
     try {
         // Dynamically load libraries only when needed
@@ -299,6 +365,7 @@ export async function sanitizePdf(file, options = {}) {
             }
         );
 
+        logInfo(`PDF sanitization successful: ${file.name} -> ${sanitizedFile.name} (${(sanitizedFile.size / 1024 / 1024).toFixed(2)} MB)`);
         return sanitizedFile;
     } catch (error) {
         logError('PDF sanitization failed', error);
@@ -335,6 +402,10 @@ export function setupPdfSanitization(options = {}) {
 }
 
 function initSanitization(workerPath) {
+    const config = getConfig();
+    logInfo('Initializing PDF sanitization...');
+    logInfo(`Configuration: showProgress=${config.showProgress}, logErrors=${config.logErrors}, workerPath=${workerPath}`);
+    
     // Store sanitized files for upload interception
     const sanitizedFilesCache = new WeakMap();
     const processingFiles = new WeakSet();
@@ -354,7 +425,14 @@ function initSanitization(workerPath) {
         }
 
         processingFiles.add(file);
+        
+        logInfo(`Starting sanitization for file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+        
         const progressIndicator = showProgress(input, 'Sanitizing PDF...');
+        
+        if (!progressIndicator && getConfig().showProgress) {
+            logWarning('Progress indicator could not be created - wrapper element not found');
+        }
 
         try {
             const sanitized = await sanitizePdf(file, {
@@ -365,7 +443,11 @@ function initSanitization(workerPath) {
             });
 
             sanitizedFilesCache.set(file, sanitized);
+            logInfo(`Sanitization completed for file: ${file.name}`);
             return sanitized;
+        } catch (error) {
+            logError(`Sanitization failed for file: ${file.name}`, error);
+            throw error;
         } finally {
             processingFiles.delete(file);
             hideProgress(input);
@@ -394,14 +476,21 @@ function initSanitization(workerPath) {
 
                 for (const [key, value] of entries) {
                     if (value instanceof File && isPdfFile(value)) {
+                        // Find the input element that corresponds to this file
+                        const input = document.querySelector(`input[type="file"][name="${key}"], input[type="file"][data-pdf-sanitize="true"]`);
+                        
+                        // Only sanitize if input is marked for sanitization
+                        if (!input || !shouldSanitizeInput(input)) {
+                            sanitizedEntries.push([key, value]);
+                            continue;
+                        }
+
                         needsSanitization = true;
                         let sanitized;
 
                         if (sanitizedFilesCache.has(value)) {
                             sanitized = sanitizedFilesCache.get(value);
                         } else {
-                            // Find the input element if possible
-                            const input = document.querySelector('input[type="file"]');
                             sanitized = await sanitizeFileWithProgress(value, input);
                         }
 
@@ -449,6 +538,15 @@ function initSanitization(workerPath) {
 
                 for (const [key, value] of entries) {
                     if (value instanceof File && isPdfFile(value)) {
+                        // Find the input element that corresponds to this file
+                        const input = document.querySelector(`input[type="file"][name="${key}"], input[type="file"][data-pdf-sanitize="true"]`);
+                        
+                        // Only sanitize if input is marked for sanitization
+                        if (!input || !shouldSanitizeInput(input)) {
+                            sanitizedEntries.push([key, value]);
+                            continue;
+                        }
+
                         needsSanitization = true;
                         let sanitized;
 
@@ -458,7 +556,6 @@ function initSanitization(workerPath) {
                             // This is async, so we need to handle it differently
                             const self = this;
                             (async () => {
-                                const input = document.querySelector('input[type="file"]');
                                 const sanitized = await sanitizeFileWithProgress(value, input);
                                 sanitizedFilesCache.set(value, sanitized);
 
@@ -500,10 +597,22 @@ function initSanitization(workerPath) {
         };
     }
 
+    /**
+     * Check if an input should be sanitized
+     */
+    function shouldSanitizeInput(input) {
+        // Only sanitize if the input has the data-pdf-sanitize attribute set to 'true'
+        return input.hasAttribute('data-pdf-sanitize') && 
+               input.getAttribute('data-pdf-sanitize') === 'true';
+    }
+
     // Function to sanitize files in an input
     const sanitizeInputFiles = async (input) => {
         const files = Array.from(input.files);
         if (files.length === 0) return false;
+
+        // Only sanitize if this input is marked for sanitization
+        if (!shouldSanitizeInput(input)) return false;
 
         // Check if any file is a PDF
         const pdfFiles = files.filter(isPdfFile);
@@ -550,6 +659,9 @@ function initSanitization(workerPath) {
             return;
         }
 
+        // Only sanitize if this input is marked for sanitization
+        if (!shouldSanitizeInput(input)) return;
+
         // Check if any files are PDFs
         const files = Array.from(input.files);
         const hasPdf = files.some(isPdfFile);
@@ -584,6 +696,9 @@ function initSanitization(workerPath) {
                             this.dataset.sanitizing = 'false';
                             return;
                         }
+
+                        // Only sanitize if this input is marked for sanitization
+                        if (!shouldSanitizeInput(this)) return;
 
                         const files = Array.from(this.files);
                         const hasPdf = files.some(isPdfFile);
