@@ -32,7 +32,7 @@ When uploading PDFs through Filament's FileUpload component, files containing em
 - PHP 8.2 or higher
 - Laravel 11 or 12
 - Filament 3.x
-- Node.js dependencies: `jspdf` and `pdfjs-dist`
+- Node.js dependencies: `jspdf` and `pdfjs-dist` (see [PDF.js version compatibility](#pdfjs-version-compatibility) below)
 
 ## 📦 Installation
 
@@ -50,6 +50,8 @@ composer require laminblur/filament-pdf-sanitizer
 npm install jspdf pdfjs-dist
 ```
 
+**PDF.js version:** The package ships a PDF.js worker that matches a specific `pdfjs-dist` version. To avoid "API version does not match the Worker version" errors, pin `pdfjs-dist` in your app's `package.json` to the same version as the bundled worker (e.g. `"pdfjs-dist": "5.4.449"`). If you want to use a different or newer `pdfjs-dist`, set `workerPath` to the worker from your installed version (see [Configuration](#configuration-options) and [Troubleshooting](#api-version-does-not-match-the-worker-version)).
+
 ### Step 3: Publish Assets
 
 ```bash
@@ -57,7 +59,7 @@ php artisan vendor:publish --tag=filament-pdf-sanitizer-assets
 php artisan vendor:publish --tag=filament-pdf-sanitizer-config
 ```
 
-> **Note:** The PDF worker file is automatically copied to `public/vendor/filament-pdf-sanitizer/` when the package is installed. If you need to update it, run the publish command again with the `--force` flag.
+> **Note:** The PDF worker file is automatically copied to `public/vendor/filament-pdf-sanitizer/` when the package is installed. If you need to update it, run the publish command again with the `--force` flag. The default worker matches a specific `pdfjs-dist` version; your app's `pdfjs-dist` version must match, or set `workerPath` to your own worker.
 
 ### Step 4: Update Vite Config (Optional)
 
@@ -136,7 +138,7 @@ You can configure the plugin in two ways:
 
 ```php
 FilamentPdfSanitizerPlugin::make()
-    ->workerPath('/custom/path/to/pdf.worker.min.js')
+    ->workerPath('/custom/path/to/pdf.worker.min.js') // Use your pdfjs-dist version's worker to avoid version mismatch
     ->scale(2.0) // Higher quality (default: 1.5)
     ->quality(0.95) // JPEG quality 0.0-1.0 (default: 0.85)
     ->maxFileSizeMb(100) // Max file size in MB (default: 50)
@@ -163,7 +165,9 @@ return [
     |--------------------------------------------------------------------------
     |
     | The path to the PDF.js worker file. This file is required for PDF
-    | parsing and rendering.
+    | parsing and rendering. The default worker matches pdfjs-dist 5.4.449.
+    | If your app uses a different pdfjs-dist version, set this to the worker
+    | from your installed pdfjs-dist (e.g. copy from node_modules to public).
     |
     */
     'worker_path' => '/vendor/filament-pdf-sanitizer/pdf.worker.min.js',
@@ -270,6 +274,10 @@ return [
 - Vector graphics and drawings
 - File structure and organization
 
+## PDF.js version compatibility
+
+The plugin uses [PDF.js](https://mozilla.github.io/pdf.js/) (via `pdfjs-dist`) for parsing and the library runs a **worker** in a separate file. The main bundle and the worker **must be the same version** or you get a runtime error. The default worker shipped with this package matches a specific `pdfjs-dist` version (e.g. 5.4.449). Either pin your app's `pdfjs-dist` to that version, or set `workerPath` to the worker from your installed `pdfjs-dist`. See [Installation](#step-2-install-npm-dependencies) and [Troubleshooting](#api-version-does-not-match-the-worker-version).
+
 ## 🌐 Browser Support
 
 - ✅ Chrome/Edge (latest)
@@ -278,9 +286,37 @@ return [
 
 ## 🐛 Troubleshooting
 
+### API version does not match the Worker version
+
+If you see: `The API version "X.X.XXX" does not match the Worker version "X.X.XXX"`:
+
+The PDF.js **main library** (from your app's bundled `pdfjs-dist`) and the **worker file** must be the same version. The package's default worker is tied to a specific build (e.g. 5.4.449).
+
+**Fix 1 – Pin pdfjs-dist to match the default worker:**  
+In your app's `package.json`, use the exact version (no `^`):
+
+```json
+"pdfjs-dist": "5.4.449"
+```
+
+Then `npm install` and rebuild. You can also force this with npm overrides or yarn/pnpm resolutions if another dependency pulls a different version.
+
+**Fix 2 – Use your app's worker:**  
+If you want a different or newer `pdfjs-dist`:
+
+1. Install the version you need: `npm install pdfjs-dist@x.x.xxx`
+2. Copy the worker from `node_modules/pdfjs-dist/build/pdf.worker.min.mjs` (or `.min.js`) to your `public/` directory (e.g. at build time or manually).
+3. Set the worker path to that file:
+
+   ```php
+   FilamentPdfSanitizerPlugin::make()->workerPath('/path/to/your/pdf.worker.min.js')
+   ```
+
+   or in `config/pdf-sanitizer.php`: `'worker_path' => '/path/to/your/pdf.worker.min.js'`
+
 ### PDF Worker Not Found
 
-If you see errors about the PDF worker file:
+If you see errors about the PDF worker file (or a version mismatch, see above):
 
 1. The worker file should be automatically copied when the package is installed. If it's missing, publish assets:
    ```bash
