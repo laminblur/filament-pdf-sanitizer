@@ -1,6 +1,6 @@
 {
     "name": "filament-pdf-sanitizer",
-    "version": "1.0.11",
+    "version": "1.0.12",
     "description": "Filament PDF Sanitizer - Client-side PDF sanitization for Filament FileUpload",
     "private": true,
     "dependencies": {

@@ -175,37 +175,8 @@ async function loadPdfjsLib(workerPath) {
             // Use worker from package if no custom path provided or if using default path
             // This ensures version compatibility with the installed pdfjs-dist version
             if (!workerPath || workerPath.includes('filament-pdf-sanitizer/pdf.worker.min.js')) {
-                let workerUrl = null;
-                
-                // Try importing worker URL directly (works with Vite, Webpack 5+, etc.)
-                try {
-                    const workerModule = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
-                    workerUrl = workerModule.default;
-                } catch (e1) {
-                    // Fallback: Use unpkg CDN with version from package to ensure exact version match
-                    try {
-                        // Get version from pdfjsLib - it's usually available as a property
-                        let version = null;
-                        if (pdfjsLib.version) {
-                            version = pdfjsLib.version;
-                        } else {
-                            // Try to read from package.json
-                            try {
-                                const pkg = await import('pdfjs-dist/package.json');
-                                version = pkg.default?.version || pkg.version;
-                            } catch (e) {
-                                // Last resort: use a reasonable default that matches package.json
-                                version = '5.4.449';
-                            }
-                        }
-                        workerUrl = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
-                    } catch (e2) {
-                        logWarning('Could not determine worker URL, using default path');
-                        workerUrl = workerPath || '/vendor/filament-pdf-sanitizer/pdf.worker.min.js';
-                    }
-                }
-                
-                pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+                // Use published .js worker to avoid MIME issues (servers often serve .mjs as octet-stream).
+                pdfjsLib.GlobalWorkerOptions.workerSrc = workerPath || '/vendor/filament-pdf-sanitizer/pdf.worker.min.js';
             } else {
                 // Use custom worker path
                 pdfjsLib.GlobalWorkerOptions.workerSrc = workerPath;
