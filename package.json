@@ -4,7 +4,7 @@
     "description": "Filament PDF Sanitizer - Client-side PDF sanitization for Filament FileUpload",
     "private": true,
     "dependencies": {
-        "jspdf": "^3.0.4",
+        "jspdf": "^4.1.0",
         "pdfjs-dist": "^5.4.449"
     }
 }
