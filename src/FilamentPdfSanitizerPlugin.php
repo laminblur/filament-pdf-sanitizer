@@ -7,6 +7,7 @@ use Filament\Panel;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Config;
+use InvalidArgumentException;
 
 class FilamentPdfSanitizerPlugin implements Plugin
 {
@@ -50,7 +51,7 @@ class FilamentPdfSanitizerPlugin implements Plugin
     public function scale(?float $scale): static
     {
         if ($scale !== null && ($scale < 0.5 || $scale > 5.0)) {
-            throw new \InvalidArgumentException('Scale must be between 0.5 and 5.0');
+            throw new InvalidArgumentException('Scale must be between 0.5 and 5.0');
         }
 
         $this->scale = $scale;
@@ -64,7 +65,7 @@ class FilamentPdfSanitizerPlugin implements Plugin
     public function quality(?float $quality): static
     {
         if ($quality !== null && ($quality < 0 || $quality > 1)) {
-            throw new \InvalidArgumentException('Quality must be between 0.0 and 1.0');
+            throw new InvalidArgumentException('Quality must be between 0.0 and 1.0');
         }
 
         $this->quality = $quality;
@@ -78,7 +79,7 @@ class FilamentPdfSanitizerPlugin implements Plugin
     public function maxFileSizeMb(?int $mb): static
     {
         if ($mb !== null && $mb < 1) {
-            throw new \InvalidArgumentException('Max file size must be at least 1 MB');
+            throw new InvalidArgumentException('Max file size must be at least 1 MB');
         }
 
         $this->maxFileSizeMb = $mb;
@@ -92,7 +93,7 @@ class FilamentPdfSanitizerPlugin implements Plugin
     public function maxPages(?int $pages): static
     {
         if ($pages !== null && $pages < 1) {
-            throw new \InvalidArgumentException('Max pages must be at least 1');
+            throw new InvalidArgumentException('Max pages must be at least 1');
         }
 
         $this->maxPages = $pages;
@@ -191,4 +192,3 @@ class FilamentPdfSanitizerPlugin implements Plugin
         // Plugin is ready to use when panel is active
     }
 }
-
