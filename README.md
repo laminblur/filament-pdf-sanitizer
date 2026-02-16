@@ -79,6 +79,16 @@ export default defineConfig({
             refresh: true,
         }),
     ],
+    optimizeDeps: {
+        include: ['pdfjs-dist', 'jspdf'],
+    },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: undefined,
+            },
+        },
+    },
 });
 ```
 
