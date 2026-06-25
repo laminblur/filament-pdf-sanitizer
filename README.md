@@ -3,7 +3,7 @@
 [![Latest Version](https://img.shields.io/packagist/v/laminblur/filament-pdf-sanitizer?style=flat-square)](https://packagist.org/packages/laminblur/filament-pdf-sanitizer)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen?style=flat-square)](LICENSE)
 [![PHP Version](https://img.shields.io/badge/php-8.2%2B-blue?style=flat-square)](https://php.net)
-[![Laravel](https://img.shields.io/badge/laravel-11%2B%20%7C%2012%2B-red?style=flat-square)](https://laravel.com)
+[![Laravel](https://img.shields.io/badge/laravel-11%2B%20%7C%2012%2B%20%7C%2013%2B-red?style=flat-square)](https://laravel.com)
 [![Filament](https://img.shields.io/badge/filament-3.x%20%7C%204.x%20%7C%205.x-orange?style=flat-square)](https://filamentphp.com)
 
 A Filament plugin that automatically sanitizes PDF files by removing JavaScript, forms, annotations, and embedded scripts before upload. This prevents AWS WAF and other security systems from blocking PDF uploads that contain executable content.
@@ -30,7 +30,7 @@ When uploading PDFs through Filament's FileUpload component, files containing em
 ## 📋 Requirements
 
 - PHP 8.2 or higher
-- Laravel 11 or 12
+- Laravel 11, 12, or 13
 - Filament 3.x, 4.x, or 5.x
 - Node.js dependencies: `jspdf` and `pdfjs-dist` (see [PDF.js version compatibility](#pdfjs-version-compatibility) below)
 
