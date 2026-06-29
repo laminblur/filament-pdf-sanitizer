@@ -67,7 +67,7 @@ function showProgress(input, message = 'Sanitizing PDF...') {
     const config = getConfig();
     if (!config.showProgress) return null;
 
-    const wrapper = input.closest('.fi-fo-file-upload-wrapper, .filament-forms-file-upload-component, .fi-input-wrp');
+    const wrapper = input.closest('.fi-fo-field-wrp, .fi-fo-field, .fi-fo-file-upload-wrapper, .filament-forms-file-upload-component, .fi-input-wrp');
     if (!wrapper) return null;
 
     // Create or update progress indicator
@@ -142,7 +142,7 @@ function showProgress(input, message = 'Sanitizing PDF...') {
  * Hide progress indicator
  */
 function hideProgress(input) {
-    const wrapper = input.closest('.fi-fo-file-upload-wrapper, .filament-forms-file-upload-component, .fi-input-wrp');
+    const wrapper = input.closest('.fi-fo-field-wrp, .fi-fo-field, .fi-fo-file-upload-wrapper, .filament-forms-file-upload-component, .fi-input-wrp');
     if (wrapper) {
         const indicator = wrapper.querySelector('.pdf-sanitizer-progress');
         if (indicator) {
@@ -157,7 +157,7 @@ function hideProgress(input) {
  * Update progress message
  */
 function updateProgress(input, message, percent = null) {
-    const wrapper = input.closest('.fi-fo-file-upload-wrapper, .filament-forms-file-upload-component, .fi-input-wrp');
+    const wrapper = input.closest('.fi-fo-field-wrp, .fi-fo-field, .fi-fo-file-upload-wrapper, .filament-forms-file-upload-component, .fi-input-wrp');
     if (wrapper) {
         const indicator = wrapper.querySelector('.pdf-sanitizer-progress');
         if (indicator) {
