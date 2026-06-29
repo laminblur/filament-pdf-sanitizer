@@ -181,6 +181,13 @@ async function loadPdfjsLib(workerPath) {
                 // Use custom worker path
                 pdfjsLib.GlobalWorkerOptions.workerSrc = workerPath;
             }
+
+            // Warn if the installed pdfjs-dist version may not match the bundled worker
+            const expectedVer = '5.4.449';
+            if (typeof pdfjsLib.version === 'string' && pdfjsLib.version !== expectedVer) {
+                logWarning(`pdfjs-dist version ${pdfjsLib.version} may not be compatible with the bundled worker (${expectedVer}). Set workerPath to the worker from your installed pdfjs-dist, or pin pdfjs-dist to ${expectedVer} in package.json.`);
+            }
+
             return pdfjsLib;
         }).catch((error) => {
             logError('Failed to load PDF.js library', error);
@@ -268,11 +275,24 @@ export async function sanitizePdf(file, options = {}) {
             canvas.width = viewport.width;
             canvas.height = viewport.height;
 
+            // Resolve optional content config to avoid internal call that may fail
+            // due to worker version mismatch
+            let optionalContentConfigPromise;
+            try {
+                optionalContentConfigPromise = page.getOptionalContentConfig();
+            } catch {
+                optionalContentConfigPromise = null;
+            }
+
             // Render page to canvas
-            await page.render({
+            // Pass both canvas (newer pdfjs-dist) and canvasContext (older) for compatibility
+            const renderTask = page.render({
+                canvas: canvas,
                 canvasContext: context,
                 viewport: viewport,
-            }).promise;
+                optionalContentConfigPromise,
+            });
+            await renderTask.promise;
 
             // Convert canvas to image
             const imgData = canvas.toDataURL('image/jpeg', quality);
