@@ -285,7 +285,9 @@ export async function sanitizePdf(file, options = {}) {
             }
 
             // Render page to canvas
+            // Pass both canvas (newer pdfjs-dist) and canvasContext (older) for compatibility
             const renderTask = page.render({
+                canvas: canvas,
                 canvasContext: context,
                 viewport: viewport,
                 optionalContentConfigPromise,
